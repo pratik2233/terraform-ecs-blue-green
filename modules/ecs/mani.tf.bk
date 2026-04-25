@@ -1,0 +1,113 @@
+################################
+# Data sources (TOP of file)
+################################
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
+
+################################
+# CloudWatch Log Group
+################################
+logConfiguration = {
+  logDriver = "awslogs"
+  options = {
+    awslogs-group         = "/ecs/${var.environment}"
+    awslogs-region        = data.aws_region.current.name
+    awslogs-stream-prefix = "ecs"
+  }
+}
+################################
+# ECS Cluster
+################################
+resource "aws_ecs_cluster" "this" {
+  name = "${var.environment}-ecs-cluster"
+}
+
+################################
+# ECS Task Definition ✅ (STEP 5.4 — ADD HERE)
+################################
+resource "aws_ecs_task_definition" "this" {
+  family                   = "${var.environment}-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+
+  execution_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/ecsTaskExecutionRole"
+
+  container_definitions = jsonencode([
+    {
+      name  = "app"
+      image = var.container_image
+
+      portMappings = [
+        {
+          containerPort = var.container_port
+          protocol      = "tcp"
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.ecs.name
+          awslogs-region        = data.aws_region.current.name
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
+}
+
+################################
+# ECS Service
+################################
+resource "aws_ecs_service" "this" {
+  name            = "${var.environment}-ecs-service"
+  cluster         = aws_ecs_cluster.this.id
+  task_definition = aws_ecs_task_definition.this.arn
+  launch_type     = "FARGATE"
+  desired_count   = 1
+
+  network_configuration {
+    subnets          = var.private_subnet_ids
+    security_groups  = [var.ecs_sg_id]
+    assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = var.target_group_arn
+    container_name   = "app"
+    container_port   = var.container_port
+  }
+
+  depends_on = [
+    aws_cloudwatch_log_group.ecs
+  ]
+}
+
+resource "aws_appautoscaling_target" "ecs" {
+  service_namespace  = "ecs"
+  resource_id        = "service/${aws_ecs_cluster.this.name}/${aws_ecs_service.this.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+
+  min_capacity = 1
+  max_capacity = 3
+}
+
+resource "aws_appautoscaling_policy" "scale_up" {
+  name               = "${var.environment}-ecs-scale-up"
+  policy_type        = "TargetTrackingScaling"
+  service_namespace  = aws_appautoscaling_target.ecs.service_namespace
+  resource_id        = aws_appautoscaling_target.ecs.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs.scalable_dimension
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+
+    target_value       = 70
+    scale_out_cooldown = 60
+    scale_in_cooldown  = 120
+  }
+}
