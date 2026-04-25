@@ -1,57 +1,59 @@
 # terraform-ecs-blue-green
 AWS ECS Blue-Green Deployment using Terraform and ALB
-📘 Page 1 — Architecture Diagram (Blue‑Green)
-Clear logical flow:
+✅ Page 1 — Project Overview
+
+What problem is solved
+Why Blue‑Green
+Why Terraform
+What AWS services are used
+
+
+✅ Page 2 — Architecture Diagram (Explained)
 Client
-   |
-   v
-Application Load Balancer (HTTP)
-   |---- 0%  ---> Blue Target Group  ---> ECS Service BLUE
-   |
-   |---- 100% ---> Green Target Group ---> ECS Service GREEN
+  |
+  v
+ALB (HTTP)
+ |-- Blue Target Group
+ |-- Green Target Group
 
-✅ ECS Fargate
-✅ Private subnets
-✅ Zero downtime
-✅ Traffic switch at ALB only
-This is enterprise‑grade architecture, explained visually.
-
-📘 Page 2 — GitHub Actions CI (Terraform)
-Explains:
-
-Workflow file location:
-.github/workflows/terraform-ci.yml
+ECS Fargate:
+- Blue Service
+- Green Service
 
 
-Triggers:
-
-Push to main
-Pull request
-
-
-Steps:
-
-Checkout code
-Setup Terraform
-terraform fmt -check
-terraform init
-terraform plan
+Zero downtime
+Traffic control at ALB
+Enterprise‑safe design
 
 
+✅ Page 3 — env/dev/main.tf
+✅ Full file
+✅ Explained module by module
+✅ Correct wiring (VPC → SG → ALB → ECS)
 
+✅ Page 4 — modules/alb/main.tf
+✅ ALB
+✅ Blue & Green Target Groups
+✅ Weighted Listener (0/100, 100/0)
+✅ Traffic switch logic
+
+✅ Page 5 — modules/ecs/main.tf
+✅ ECS Cluster
+✅ Task Definition
+✅ Blue ECS Service
+✅ Green ECS Service
+✅ Correct load_balancer {} placement
+
+✅ Page 6 — GitHub Actions CI
+✅ .github/workflows/terraform-ci.yml
+✅ fmt, init, plan
 ✅ Safe CI (no apply)
-✅ Enterprise‑friendly
-✅ Interview‑ready
+✅ Interview‑ready pipeline
 
-📘 Page 3 — Sample GitHub Actions YAML
-Ready‑to‑use CI config:
-YAMLname: Terraform CIon:  push:    branches: [ main ]  pull_request:jobs:  terraform:    runs-on: ubuntu-latest    steps:      - uses: actions/checkout@v4      - uses: hashicorp/setup-terraform@v3      - run: terraform fmt -check      - run: terraform init      - run: terraform planShow more lines
-✅ Clean
-✅ Minimal
-✅ Correct
-
-✅ How to add this PDF to your GitHub repo
-Shellcd ~/Terraform/aws-terrafrommkdir docsmv Terraform_ECS_Blue_Green_Architecture_and_CI.pdf docs/git add docs/git commit -m "Add architecture diagram and GitHub Actions CI documentation"git pushShow more lines
-
-✅ Add this line to your README (recommended)
-Markdown📄 **Architecture & CI Documentation**  See `docs/Terraform_ECS_Blue_Green_Architecture_and_CI.pdf`
+✅ Page 7 — GitHub Push Steps
+✅ git init
+✅ .gitignore
+✅ git add
+✅ git commit
+✅ git pull --rebase
+✅ git push
